@@ -1,0 +1,23 @@
+{
+  "name": "tracker-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "migrate": "node src/migrate.ts",
+    "account": "node src/account.ts",
+    "test": "node --test src/*.test.ts"
+  },
+  "dependencies": {
+    "better-auth": "^1.6.0",
+    "fastify": "^5.8.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.5",
+    "typescript": "~5.9.3"
+  }
+}
