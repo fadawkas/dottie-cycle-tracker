@@ -11,7 +11,7 @@ export function remindersForToday({ today, settings, hasDailyLog, hasOpenPeriod,
   const reminders: Reminder[] = [];
   if (settings.remindEnd && hasOpenPeriod && suggestedEnd && today >= suggestedEnd) reminders.push('confirm-end');
   if (settings.remindDaily && !hasDailyLog) reminders.push('check-in');
-  if (settings.remindPeriod && !hasOpenPeriod && forecast && today <= forecast.to
+  if (settings.remindPeriod && !hasOpenPeriod && forecast?.basis === 'history' && today <= forecast.to
     && daysBetween(today, forecast.from) <= 3) reminders.push('upcoming-period');
   return reminders;
 }

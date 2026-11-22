@@ -36,8 +36,8 @@ export function scoreCohort(sequences) {
       medianAll.push(baselineError);
 
       const candidate = forecastPeriodStart(knownStarts);
-      if (candidate.status !== 'forecast') {
-        const reason = candidate.reason ?? candidate.status;
+      if (candidate.status !== 'forecast' || candidate.basis !== 'history') {
+        const reason = candidate.status === 'abstained' ? candidate.reason : candidate.status;
         abstentions[reason] = (abstentions[reason] ?? 0) + 1;
         continue;
       }

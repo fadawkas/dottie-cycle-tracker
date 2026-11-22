@@ -41,9 +41,11 @@ and live Neon verification are intentionally separate from the local build.
 ## Account provisioning and recovery
 
 Use the account command from a trusted API environment with the production
-database configuration. There is no public signup or reset form. Verify who
-owns the account before resetting it. Run the same command documented in
-the local README with `--reset` before the email to replace a password, revoke
+database configuration. Run it from `api/`; it can load a private `api/.env`.
+There is no HTTP account-creation endpoint, public signup, or reset form.
+
+Verify who owns an account before resetting it. Run the same command documented
+in the local README with `--reset` before the email to replace a password, revoke
 existing sessions, and clear the account's sign-in throttle:
 
 ```bash

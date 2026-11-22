@@ -1,10 +1,25 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { scoreCohort } from './benchmark.mjs';
-import { forecastLabel, forecastPeriodStart, suggestedPeriodEnd } from '../../src/forecast.ts';
+import { currentForecast, estimateCyclePhases, forecastLabel, forecastPeriodStart, suggestedPeriodEnd } from '../../src/forecast.ts';
 
-test('short, invalid, and duplicate histories do not produce a forecast', () => {
-  assert.deepEqual(forecastPeriodStart(['2025-01-31', '2025-02-28', '2025-03-28']), { status: 'insufficient-history' });
+test('one to three starts yield a preliminary range and no phase estimates', () => {
+  const starts = ['2025-01-31', '2025-02-28', '2025-03-28'];
+  assert.deepEqual(forecastPeriodStart([]), { status: 'insufficient-history' });
+  assert.deepEqual(forecastPeriodStart(starts.slice(0, 1)), {
+    status: 'forecast', basis: 'preliminary', from: '2025-02-24', to: '2025-03-10',
+  });
+  for (const count of [1, 2, 3]) {
+    const forecast = forecastPeriodStart(starts.slice(0, count));
+    assert.equal(forecast.basis, 'preliminary');
+    assert.equal(estimateCyclePhases(forecast, starts[count - 1], null), null);
+  }
+  assert.deepEqual(forecastPeriodStart(['2025-01-01', '2025-02-14']), {
+    status: 'abstained', reason: 'unusual-interval',
+  });
+});
+
+test('invalid and duplicate dates do not produce a forecast', () => {
   assert.throws(() => forecastPeriodStart(['2025-02-30']), /valid YYYY-MM-DD/);
   assert.throws(() => forecastPeriodStart(['2025-01-31', '2025-01-31']), /must be unique/);
 });
@@ -12,8 +27,32 @@ test('short, invalid, and duplicate histories do not produce a forecast', () => 
 test('onset quantiles produce an ordered future range and accept unordered logs', () => {
   const result = forecastPeriodStart(['2025-03-28', '2025-01-31', '2025-04-25', '2025-02-28']);
   assert.equal(result.status, 'forecast');
+  assert.equal(result.basis, 'history');
   assert.equal(result.expected, '2025-05-23');
   assert.ok('2025-04-25' < result.from && result.from < result.expected && result.expected < result.to);
+});
+
+test('expired ranges do not roll forward without a new recorded start', () => {
+  const forecast = forecastPeriodStart(['2025-01-31']);
+  assert.deepEqual(currentForecast(forecast, '2025-03-10'), forecast);
+  assert.deepEqual(currentForecast(forecast, '2025-03-11'), { status: 'expired' });
+  const next = forecastPeriodStart(['2025-01-31', '2025-03-01']);
+  assert.deepEqual(currentForecast(next, '2025-03-11'), next);
+  assert.equal(next.from, '2025-03-25');
+});
+
+test('phase estimates use date boundaries and omit conflicting windows', () => {
+  const forecast = { status: 'forecast', basis: 'history', from: '2025-05-21', to: '2025-05-25', expected: '2025-05-23' };
+  const phases = estimateCyclePhases(forecast, '2025-04-25', '2025-04-29');
+  assert.deepEqual(phases, {
+    follicularEnd: { from: '2025-05-03', to: '2025-05-13' },
+    ovulation: { from: '2025-05-04', to: '2025-05-14' },
+    lutealStart: { from: '2025-05-05', to: '2025-05-15' },
+    lutealEnd: { from: '2025-05-20', to: '2025-05-24' },
+  });
+  assert.deepEqual(estimateCyclePhases(forecast, '2025-04-25', null), phases);
+  assert.equal(estimateCyclePhases(forecast, '2025-04-25', '2025-05-04'), null);
+  assert.equal(estimateCyclePhases({ ...forecast, to: '2025-06-04' }, '2025-04-25', null), null);
 });
 
 test('variable or unusual intervals do not silently produce a point forecast', () => {

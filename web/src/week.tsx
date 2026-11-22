@@ -13,7 +13,8 @@ export function WeekStrip({ today, periods, range, suggestedEnd, disabled, selec
       const confirmed = !!(period?.endDate || period?.startDate === day);
       const suggested = !confirmed && day === suggestedEnd;
       const estimated = !confirmed && !suggested && !!range && day >= range.from && day <= range.to;
-      const status = confirmed ? 'confirmed period' : suggested ? 'suggested period end' : estimated ? 'estimated start range' : '';
+      const status = confirmed ? 'confirmed period' : suggested ? 'suggested period end' : estimated
+        ? range.basis === 'preliminary' ? 'preliminary start range, low confidence' : 'estimated start range' : '';
       const dateStyle = confirmed ? 'rounded-full border-transparent bg-lavender text-plum'
         : suggested ? 'rounded-[.38rem] border-transparent bg-apricot text-plum'
         : estimated ? 'rounded-full border-dashed border-lavender text-surface' : 'rounded-full border-transparent text-surface';

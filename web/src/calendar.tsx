@@ -19,6 +19,7 @@ export function Calendar({ tracker, today, range, suggestedEnd, selected, select
   const monthLabel = formatDay(month, { month: 'long', year: 'numeric' });
   const cells = Array.from({ length: utcDate(addDays(nextMonth, -1)).getUTCDate() }, (_, index) => addDays(month, index));
   const loggedDays = new Set(tracker.dailyLogs.map(({ day }) => day));
+  const rangeLabel = range?.basis === 'preliminary' ? 'Preliminary start range (low confidence)' : 'Estimated start range';
 
   function move(amount: number) {
     const target = shiftMonth(month, amount);
@@ -45,7 +46,7 @@ export function Calendar({ tracker, today, range, suggestedEnd, selected, select
           const suggested = !recorded && day === suggestedEnd;
           const predicted = !recorded && !suggested && !!range && range.from <= day && day <= range.to;
           const logged = loggedDays.has(day);
-          const status = [recorded && 'confirmed period', suggested && 'suggested period end', predicted && 'estimated start range', logged && 'daily log'].filter(Boolean);
+          const status = [recorded && 'confirmed period', suggested && 'suggested period end', predicted && rangeLabel, logged && 'daily log'].filter(Boolean);
           const appearance = recorded ? `${confirmedDay} enabled:hover:bg-plum aria-pressed:-outline-offset-4 aria-pressed:outline-surface`
             : `${suggested ? `${suggestedDay} enabled:hover:bg-apricot` : predicted ? `${estimatedDay} enabled:hover:bg-lavender` : 'border-rule'}
               aria-pressed:not-focus-visible:-outline-offset-2 aria-pressed:outline-plum`;
@@ -64,7 +65,7 @@ export function Calendar({ tracker, today, range, suggestedEnd, selected, select
       <div className="mt-[.8rem] flex flex-wrap gap-x-[.9rem] gap-y-[.45rem] text-[.78rem] text-muted [&>span]:flex [&>span]:items-center [&>span]:gap-[.35rem]">
         <span><i className={`${confirmedDay} h-3 w-3.5`} /> Confirmed period</span>
         <span><i className={`${suggestedDay} h-3 w-3.5`} /> Suggested end</span>
-        <span><i className={`${estimatedDay} h-3 w-3.5`} /> Estimated start range</span>
+        <span><i className={`${estimatedDay} h-3 w-3.5`} /> {rangeLabel}</span>
         <span><i className={dayDot} /> Daily log</span>
       </div>
     </section>

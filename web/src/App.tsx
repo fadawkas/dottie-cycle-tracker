@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar } from './calendar.tsx';
 import { RequestError, messageFor, request } from './client.ts';
+import { CycleOutlook } from './cycle-outlook.tsx';
 import { periodOnDay } from './cycle.ts';
 import { daysBetween, formatDay, todayDate } from './dates.ts';
 import { ErrorMessage, LogEditor, PeriodEditor, useAction, type PeriodInput } from './editors.tsx';
-import { forecastLabel, forecastPeriodStart, suggestedPeriodEnd } from './forecast.ts';
+import { currentForecast, forecastPeriodStart, suggestedPeriodEnd } from './forecast.ts';
 import { Insights } from './insights.tsx';
 import type { DailyLog, Observations, Period, Settings, SetupEntry, Tracker } from './model.ts';
 import { Navigation, type Tab } from './navigation.tsx';
@@ -214,7 +215,10 @@ export default function App() {
 
   const periods = tracker?.periods;
   const forecast = useMemo(() => forecastPeriodStart(periods?.map(({ startDate }) => startDate) ?? []), [periods]);
-  const range = forecast.status === 'forecast' && forecast.to >= today ? forecast : null;
+  const outlook = currentForecast(forecast, today);
+  const range = outlook.status === 'forecast' ? outlook : null;
+  const latestPeriod = periods?.reduce<Period | undefined>((latest, entry) =>
+    !latest || entry.startDate > latest.startDate ? entry : latest, undefined);
   const active = periods?.find((entry) => entry.endDate === null && !entry.endUnknown && entry.startDate <= today);
   const suggestedEnd = active && tracker ? suggestedPeriodEnd(active.startDate, tracker.settings.typicalPeriodDays) : null;
   const confirmDue = !!suggestedEnd && suggestedEnd <= today;
@@ -226,10 +230,6 @@ export default function App() {
   const primaryIsLog = tab === 'Today' && !!period && (!active || (!!suggestedEnd && !confirmDue));
   const periodLabel = tab === 'Today' && active ? (confirmDue ? 'Confirm end' : 'Log end date') : period ? 'Edit period' : 'Log period';
   const logLabel = dailyLog ? 'Edit daily log' : tab === 'Today' ? 'Log today' : 'Add daily log';
-  const forecastCopy = forecast.status === 'insufficient-history' ? 'Log four period starts to see an estimated range.'
-    : forecast.status === 'abstained' ? 'No reliable estimate right now. Recent intervals are too variable or have gaps.'
-    : 'The last estimated range has passed. Log your next start when it happens.';
-
   const periodButton = (style = '') => <button className={style} ref={periodTrigger} type="button"
     aria-expanded={editor?.type === 'period'} onClick={() => !saving && open({ type: 'period' })}>{periodLabel}</button>;
   const logButton = (style = '') => <button className={style} ref={logTrigger} type="button"
@@ -275,8 +275,9 @@ export default function App() {
               <div className="journal-split">
                 <div>
                   <h2 className="journal-title" id="today-status-heading">{active ? `Day ${daysBetween(active.startDate, today) + 1}`
-                    : range ? forecastLabel(range) : period ? 'Period logged' : 'Track your cycle'}</h2>
-                  <p>{active ? 'Since your recorded start · end not confirmed' : range ? 'Estimated next start · not a recorded date' : forecastCopy}</p>
+                    : latestPeriod ? 'Your cycle' : 'Track your cycle'}</h2>
+                  <p>{active ? 'Since your recorded start · end not confirmed'
+                    : latestPeriod ? `Last recorded start: ${formatDay(latestPeriod.startDate)}` : 'Log a period start to see an estimate.'}</p>
                   {active && suggestedEnd && <p className="text-apricot">Suggested end: {formatDay(suggestedEnd)}</p>}
                   <div className="hero-actions">
                     {primaryIsLog ? <>{logButton('journal-action')}{periodButton('hero-secondary')}</> : periodButton('journal-action')}
@@ -287,24 +288,21 @@ export default function App() {
               <WeekStrip today={today} periods={tracker.periods} range={range} suggestedEnd={suggestedEnd}
                 disabled={saving} select={calendarDay} />
             </section>
-            <div className="grid items-start gap-[clamp(.9rem,2.8vw,1.7rem)]
-              not-compact:has-[aside]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-              <section className="journal-card" aria-labelledby="today-log">
-                <h2 id="today-log">Daily check-in</h2>
-                <p className="text-muted">{dailyLog ? 'Today’s log is saved. You can edit it anytime.' : 'Record bleeding, symptoms, or anything else you’re tracking.'}</p>
-                {!primaryIsLog && <div className="actions">{logButton('primary')}</div>}
-                {periodEditor}
-              </section>
-              {(active || reminders.length > 0) && <aside className="grid gap-[.85rem]" aria-label="Cycle information">
-                {active && <section className="journal-card" aria-labelledby="forecast-title">
-                  <h2 className="text-[1.19rem] tracking-[-.02em]" id="forecast-title">Next period</h2>
-                  {range ? <><p className="mt-[.35rem] mb-[.45rem] text-[clamp(1.6rem,4vw,2.5rem)] leading-[1.12] font-[750] tracking-[-.035em]">{forecastLabel(range)}</p><p className="text-muted">Estimated next start.</p></> : <p className="text-muted">{forecastCopy}</p>}
-                </section>}
+            <div className="grid items-start gap-[clamp(.9rem,2.8vw,1.7rem)] not-compact:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+              <CycleOutlook forecast={outlook} period={latestPeriod} startCount={tracker.periods.length}
+                suggestedEnd={latestPeriod?.id === active?.id ? suggestedEnd : null} />
+              <div className="grid gap-[.85rem]">
+                <section className="journal-card" aria-labelledby="today-log">
+                  <h2 id="today-log">Daily check-in</h2>
+                  <p className="text-muted">{dailyLog ? 'Today’s log is saved. You can edit it anytime.' : 'Record bleeding, symptoms, or anything else you’re tracking.'}</p>
+                  {!primaryIsLog && <div className="actions">{logButton('primary')}</div>}
+                  {periodEditor}
+                </section>
                 {reminders.length > 0 && <section className="journal-card" aria-labelledby="reminders-heading">
                   <h2 className="text-[1.19rem] tracking-[-.02em]" id="reminders-heading">Reminders</h2>
                   <ul className="mx-0 mt-[.55rem] mb-0 pl-[1.35rem] text-muted">{reminders.map((reminder) => <li key={reminder}>{reminderText[reminder]}</li>)}</ul>
                 </section>}
-              </aside>}
+              </div>
             </div>
           </div>
         </>}
@@ -326,7 +324,8 @@ export default function App() {
                   <div>
                     <h2 className="journal-title text-[clamp(1.35rem,2.65vw,2.25rem)]" id="day-heading">{formatDay(day, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
                     <p className="not-phone:mt-2">{period?.endUnknown ? 'Confirmed start. End date unknown.' : recorded ? 'Confirmed period day.' : period ? 'Open period. This day isn’t confirmed.'
-                      : selectedInForecast ? 'Part of your estimated start range.' : 'No period logged.'}
+                      : selectedInForecast ? range.basis === 'preliminary' ? 'Part of your preliminary start range · low confidence.'
+                        : 'Part of your estimated start range.' : 'No period logged.'}
                       {dailyLog ? ' Daily log saved.' : ''}</p>
                   </div>
                   <img className="journal-art max-w-36 phone:max-w-[5.1rem]" src="/cycle-leaves.svg" width="342" height="268" alt="" />
