@@ -22,18 +22,18 @@ const reminderText = {
 };
 
 function Mark() {
-  return <svg className="wordmark-icon" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true" fill="none">
+  return <svg className="flex-none rounded-[.65rem] bg-plum text-surface" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true" fill="none">
     <path d="M20 14c-3-2-6-2.5-10-1.5v15c4-1 7-.5 10 1.5 3-2 6-2.5 10-1.5v-15c-4-1-7-.5-10 1.5Zm0 0v15" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-    <path d="M24 12.5v8l2-1.4 2 1.4v-8.4" fill="var(--apricot)" />
+    <path d="M24 12.5v8l2-1.4 2 1.4v-8.4" fill="var(--color-apricot)" />
   </svg>;
 }
 
 function SignIn({ onSignIn, notice }: { onSignIn: () => Promise<void>; notice: string }) {
   const { busy, error, run } = useAction();
   return (
-    <section className="journal-card sign-in">
-      <h1>Sign in</h1>
-      <p className="muted">Use your private account to open your cycle journal.</p>
+    <section className="journal-card">
+      <h1 className="text-[clamp(2rem,6vw,3.35rem)]">Sign in</h1>
+      <p className="mt-[.45rem] text-muted">Use your private account to open your cycle journal.</p>
       <form onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -43,9 +43,9 @@ function SignIn({ onSignIn, notice }: { onSignIn: () => Promise<void>; notice: s
         });
       }}>
         <fieldset disabled={busy}>
-          <label>Email<input name="email" autoComplete="username" type="email" required /></label>
-          <label>Password<input name="password" autoComplete="current-password" type="password" required /></label>
-          <button className="primary" type="submit">{busy ? 'Signing in…' : 'Sign in'}</button>
+          <label className="mt-4">Email<input name="email" autoComplete="username" type="email" required /></label>
+          <label className="mt-4">Password<input name="password" autoComplete="current-password" type="password" required /></label>
+          <button className="primary mt-5 w-full" type="submit">{busy ? 'Signing in…' : 'Sign in'}</button>
         </fieldset>
         <ErrorMessage>{error || notice}</ErrorMessage>
       </form>
@@ -240,21 +240,24 @@ export default function App() {
   const logDay = editor?.type === 'log' ? editor.day : null;
 
   return (
-    <div className="app-shell">
-      <a className="skip" href="#main">Skip to content</a>
-      <header className="site-header">
-        <div className="wordmark">
+    <div className="mx-auto w-[min(100%_-_max(clamp(32px,8vw,112px),calc(2_*_max(env(safe-area-inset-left,0px),env(safe-area-inset-right,0px)))),1100px)]
+      pt-[env(safe-area-inset-top,0px)] compact:[&:has(input:focus,textarea:focus,select:focus)_nav]:invisible">
+      <a className="absolute top-2 left-2 z-1 -translate-y-[200%] focus:translate-y-0 focus:bg-surface focus:p-[.6rem]" href="#main">Skip to content</a>
+      <header className="flex min-h-[76px] items-center border-b border-rule py-2 compact:min-h-[62px]">
+        <div className="flex items-center gap-3">
           <Mark />
-          <div className="wordmark-copy">
-            <span className="wordmark-name">Dottie</span>
-            <span className="wordmark-description">Period &amp; symptom journal</span>
+          <div className="grid gap-[.2rem]">
+            <span className="text-xl leading-[1.1] font-[750] tracking-[-.035em]">Dottie</span>
+            <span className="text-xs leading-[1.3] text-muted">Period &amp; symptom journal</span>
           </div>
         </div>
       </header>
-      <main ref={main} id="main" tabIndex={-1} className={!tracker ? 'narrow' : ready ? 'has-dock' : ''}>
-        {!online && <p role="status" className="connection">You’re offline. Reconnect to save or refresh your journal.</p>}
-        {tracker === undefined && (loadError ? <div className="error-panel">
-          <h1>Journal unavailable</h1>
+      <main ref={main} id="main" tabIndex={-1}
+        className={!tracker ? 'm-auto max-w-[420px] pt-[clamp(2.25rem,9vw,6rem)]'
+          : ready ? 'pt-[clamp(1rem,3vw,2rem)] pb-[calc(7rem+env(safe-area-inset-bottom,0px))]' : ''}>
+        {!online && <p role="status" className="mb-5 bg-apricot p-4">You’re offline. Reconnect to save or refresh your journal.</p>}
+        {tracker === undefined && (loadError ? <div>
+          <h1 className="text-[clamp(2rem,6vw,3.35rem)]">Journal unavailable</h1>
           <ErrorMessage>{loadError}</ErrorMessage>
           <button onClick={() => void load()}>Try again</button>
         </div> : <p role="status">Opening your journal…</p>)}
@@ -263,42 +266,43 @@ export default function App() {
         {tracker && !ready && <Welcome today={today} complete={completeSetup} signOut={signOut} />}
 
         {tracker && ready && tab === 'Today' && <>
-          <div className="page-intro journal-intro">
+          <div className="page-intro">
             <h1>Today</h1>
             <p>{formatDay(today, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
           </div>
-          <div className="today-page">
-            <section className="journal-feature today-hero" aria-labelledby="today-status-heading">
+          <div className="grid items-start gap-[clamp(.9rem,2.8vw,1.7rem)]">
+            <section className="journal-feature" aria-labelledby="today-status-heading">
               <div className="journal-split">
                 <div>
                   <h2 className="journal-title" id="today-status-heading">{active ? `Day ${daysBetween(active.startDate, today) + 1}`
                     : range ? forecastLabel(range) : period ? 'Period logged' : 'Track your cycle'}</h2>
                   <p>{active ? 'Since your recorded start · end not confirmed' : range ? 'Estimated next start · not a recorded date' : forecastCopy}</p>
-                  {active && suggestedEnd && <p className="hero-suggestion">Suggested end: {formatDay(suggestedEnd)}</p>}
+                  {active && suggestedEnd && <p className="text-apricot">Suggested end: {formatDay(suggestedEnd)}</p>}
                   <div className="hero-actions">
                     {primaryIsLog ? <>{logButton('journal-action')}{periodButton('hero-secondary')}</> : periodButton('journal-action')}
                   </div>
                 </div>
-                <img className="journal-art" src="/day-notes.svg" width="342" height="268" alt="" />
+                <img className="journal-art not-phone:-my-4" src="/day-notes.svg" width="342" height="268" alt="" />
               </div>
               <WeekStrip today={today} periods={tracker.periods} range={range} suggestedEnd={suggestedEnd}
                 disabled={saving} select={calendarDay} />
             </section>
-            <div className="today-below">
+            <div className="grid items-start gap-[clamp(.9rem,2.8vw,1.7rem)]
+              not-compact:has-[aside]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
               <section className="journal-card" aria-labelledby="today-log">
                 <h2 id="today-log">Daily check-in</h2>
-                <p className="muted">{dailyLog ? 'Today’s log is saved. You can edit it anytime.' : 'Record bleeding, symptoms, or anything else you’re tracking.'}</p>
+                <p className="text-muted">{dailyLog ? 'Today’s log is saved. You can edit it anytime.' : 'Record bleeding, symptoms, or anything else you’re tracking.'}</p>
                 {!primaryIsLog && <div className="actions">{logButton('primary')}</div>}
                 {periodEditor}
               </section>
-              {(active || reminders.length > 0) && <aside className="today-side" aria-label="Cycle information">
-                {active && <section className="journal-card forecast-panel" aria-labelledby="forecast-title">
-                  <h2 id="forecast-title">Next period</h2>
-                  {range ? <><p className="range-date">{forecastLabel(range)}</p><p className="muted">Estimated next start.</p></> : <p className="muted">{forecastCopy}</p>}
+              {(active || reminders.length > 0) && <aside className="grid gap-[.85rem]" aria-label="Cycle information">
+                {active && <section className="journal-card" aria-labelledby="forecast-title">
+                  <h2 className="text-[1.19rem] tracking-[-.02em]" id="forecast-title">Next period</h2>
+                  {range ? <><p className="mt-[.35rem] mb-[.45rem] text-[clamp(1.6rem,4vw,2.5rem)] leading-[1.12] font-[750] tracking-[-.035em]">{forecastLabel(range)}</p><p className="text-muted">Estimated next start.</p></> : <p className="text-muted">{forecastCopy}</p>}
                 </section>}
-                {reminders.length > 0 && <section className="journal-card reminder-panel" aria-labelledby="reminders-heading">
-                  <h2 id="reminders-heading">Reminders</h2>
-                  <ul className="muted">{reminders.map((reminder) => <li key={reminder}>{reminderText[reminder]}</li>)}</ul>
+                {reminders.length > 0 && <section className="journal-card" aria-labelledby="reminders-heading">
+                  <h2 className="text-[1.19rem] tracking-[-.02em]" id="reminders-heading">Reminders</h2>
+                  <ul className="mx-0 mt-[.55rem] mb-0 pl-[1.35rem] text-muted">{reminders.map((reminder) => <li key={reminder}>{reminderText[reminder]}</li>)}</ul>
                 </section>}
               </aside>}
             </div>
@@ -306,31 +310,31 @@ export default function App() {
         </>}
 
         {tracker && ready && tab === 'Calendar' && <>
-          <div className="page-intro journal-intro">
+          <div className="page-intro">
             <h1>Calendar</h1>
             <p>Choose a day to view or update your records.</p>
           </div>
-          <div className="calendar-layout">
+          <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start gap-[clamp(.85rem,2.5vw,1.5rem)] compact:grid-cols-1">
             <Calendar tracker={tracker} today={today} range={range} suggestedEnd={suggestedEnd} selected={selected} disabled={saving} select={(date) => {
               setEditor(null);
               setNotice('');
               setSelected(date);
             }} />
-            <div className="calendar-selection">
-              <section className="journal-feature day-detail" aria-labelledby="day-heading">
-                <div className="journal-split">
+            <div className="grid min-w-0 gap-[.85rem]">
+              <section className="journal-feature p-[clamp(1rem,2.8vw,1.65rem)]" aria-labelledby="day-heading">
+                <div className="journal-split not-phone:grid-cols-[minmax(0,1fr)_minmax(4rem,.42fr)]">
                   <div>
-                    <h2 className="journal-title" id="day-heading">{formatDay(day, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
-                    <p>{period?.endUnknown ? 'Confirmed start. End date unknown.' : recorded ? 'Confirmed period day.' : period ? 'Open period. This day isn’t confirmed.'
+                    <h2 className="journal-title text-[clamp(1.35rem,2.65vw,2.25rem)]" id="day-heading">{formatDay(day, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+                    <p className="not-phone:mt-2">{period?.endUnknown ? 'Confirmed start. End date unknown.' : recorded ? 'Confirmed period day.' : period ? 'Open period. This day isn’t confirmed.'
                       : selectedInForecast ? 'Part of your estimated start range.' : 'No period logged.'}
                       {dailyLog ? ' Daily log saved.' : ''}</p>
                   </div>
-                  <img className="journal-art" src="/cycle-leaves.svg" width="342" height="268" alt="" />
+                  <img className="journal-art max-w-36 phone:max-w-[5.1rem]" src="/cycle-leaves.svg" width="342" height="268" alt="" />
                 </div>
-                {day === suggestedEnd && <p className="suggestion">Suggested end date · not confirmed.</p>}
-                {day <= today && <div className="hero-actions">{periodButton('journal-action')}{logButton('hero-secondary')}</div>}
+                {day === suggestedEnd && <p className="suggestion rounded-[.65rem] text-plum">Suggested end date · not confirmed.</p>}
+                {day <= today && <div className="hero-actions phone:mt-[.7rem]">{periodButton('journal-action')}{logButton('hero-secondary')}</div>}
               </section>
-              {periodEditor && <div className="journal-card calendar-day-editor">{periodEditor}</div>}
+              {periodEditor && <div className="journal-card [&>section]:m-0 [&>section]:border-0 [&>section]:p-0">{periodEditor}</div>}
             </div>
           </div>
         </>}

@@ -4,6 +4,10 @@ import type { ForecastRange } from './forecast.ts';
 import type { Tracker } from './model.ts';
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const confirmedDay = 'border border-plum bg-plum text-surface';
+const suggestedDay = 'border border-plum bg-apricot';
+const estimatedDay = 'border border-dashed border-control bg-lavender';
+const dayDot = 'inline-block size-[5px] rounded-full bg-current';
 
 export function Calendar({ tracker, today, range, suggestedEnd, selected, select, disabled }: {
   tracker: Tracker; today: string; range: ForecastRange | null; suggestedEnd: string | null;
@@ -22,18 +26,18 @@ export function Calendar({ tracker, today, range, suggestedEnd, selected, select
   }
 
   return (
-    <section className="journal-card calendar" aria-label="Cycle calendar">
-      <div className="calendar-toolbar">
-        <button type="button" disabled={disabled} aria-label="Previous month" onClick={() => move(-1)}>
+    <section className="journal-card" aria-label="Cycle calendar">
+      <div className="mb-[.65rem] flex items-center justify-between gap-[.35rem]">
+        <button className="grid min-w-[44px] place-items-center p-[.4rem]" type="button" disabled={disabled} aria-label="Previous month" onClick={() => move(-1)}>
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m15 18-6-6 6-6" /></svg>
         </button>
         <h2 aria-live="polite">{monthLabel}</h2>
-        <button type="button" disabled={disabled} aria-label="Next month" onClick={() => move(1)}>
+        <button className="grid min-w-[44px] place-items-center p-[.4rem]" type="button" disabled={disabled} aria-label="Next month" onClick={() => move(1)}>
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m9 18 6-6-6-6" /></svg>
         </button>
       </div>
-      <div className="calendar-grid">
-        {weekdays.map((label) => <span className="weekday" key={label}>{label}</span>)}
+      <div className="grid grid-cols-7 gap-[clamp(2px,.65vw,5px)]">
+        {weekdays.map((label) => <span className="py-[.3rem] text-center text-[.77rem] text-muted" key={label}>{label}</span>)}
         {Array.from({ length: offset }, (_, index) => <span key={'blank-' + index} />)}
         {cells.map((day) => {
           const period = periodOnDay(tracker.periods, day, today);
@@ -42,22 +46,26 @@ export function Calendar({ tracker, today, range, suggestedEnd, selected, select
           const predicted = !recorded && !suggested && !!range && range.from <= day && day <= range.to;
           const logged = loggedDays.has(day);
           const status = [recorded && 'confirmed period', suggested && 'suggested period end', predicted && 'estimated start range', logged && 'daily log'].filter(Boolean);
+          const appearance = recorded ? `${confirmedDay} enabled:hover:bg-plum aria-pressed:-outline-offset-4 aria-pressed:outline-surface`
+            : `${suggested ? `${suggestedDay} enabled:hover:bg-apricot` : predicted ? `${estimatedDay} enabled:hover:bg-lavender` : 'border-rule'}
+              aria-pressed:not-focus-visible:-outline-offset-2 aria-pressed:outline-plum`;
           return (
             <button key={day} type="button" disabled={disabled} aria-pressed={selected === day} aria-current={day === today ? 'date' : undefined}
               aria-label={[formatDay(day, { month: 'long', day: 'numeric', year: 'numeric' }), ...status].join(', ')}
-              className={'calendar-day' + (recorded ? ' recorded' : suggested ? ' suggested' : predicted ? ' estimated' : '')}
+              className={`relative p-0 tabular-nums aria-pressed:outline-2 focus-visible:outline-dashed focus-visible:outline-offset-1
+                aria-[current=date]:[&>span:first-child]:underline aria-[current=date]:[&>span:first-child]:underline-offset-4 ${appearance}`}
               onClick={() => select(day)}>
               <span>{Number(day.slice(8))}</span>
-              {logged && <span className="day-dot" aria-hidden="true" />}
+              {logged && <span className={`${dayDot} absolute bottom-1 left-[calc(50%-2.5px)]`} aria-hidden="true" />}
             </button>
           );
         })}
       </div>
-      <div className="legend">
-        <span><i className="recorded" /> Confirmed period</span>
-        <span><i className="suggested" /> Suggested end</span>
-        <span><i className="estimated" /> Estimated start range</span>
-        <span><i className="day-dot" /> Daily log</span>
+      <div className="mt-[.8rem] flex flex-wrap gap-x-[.9rem] gap-y-[.45rem] text-[.78rem] text-muted [&>span]:flex [&>span]:items-center [&>span]:gap-[.35rem]">
+        <span><i className={`${confirmedDay} h-3 w-3.5`} /> Confirmed period</span>
+        <span><i className={`${suggestedDay} h-3 w-3.5`} /> Suggested end</span>
+        <span><i className={`${estimatedDay} h-3 w-3.5`} /> Estimated start range</span>
+        <span><i className={dayDot} /> Daily log</span>
       </div>
     </section>
   );

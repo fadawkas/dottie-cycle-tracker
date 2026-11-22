@@ -33,21 +33,21 @@ export function Welcome({ today, complete, signOut }: {
   }
 
   return (
-    <div className="welcome-layout">
-      <section className="journal-feature journal-split welcome-cover">
+    <div className="grid grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)] items-start gap-[clamp(.85rem,2.8vw,1.7rem)] compact:grid-cols-1">
+      <section className="journal-feature journal-split not-compact:grid-cols-1 compact:not-phone:grid-cols-[minmax(0,1fr)_minmax(0,.58fr)]">
         <div>
-          <h1 className="journal-title">Welcome to <span>Dottie.</span></h1>
+          <h1 className="journal-title">Welcome to <span className="block">Dottie.</span></h1>
           <p>Your private journal for periods and the days in between.</p>
         </div>
-        <img className="journal-art" src="/journal-cover.svg" width="342" height="268" alt="" />
+        <img className="journal-art not-compact:mt-[-.6rem] compact:max-w-42" src="/journal-cover.svg" width="342" height="268" alt="" />
       </section>
-      <section className="journal-card welcome-entry" aria-labelledby="welcome-heading">
-        <h2 id="welcome-heading" tabIndex={-1} ref={heading}>
+      <section className="journal-card [&_form_p]:mt-[.6rem]" aria-labelledby="welcome-heading">
+        <h2 className="text-[clamp(1.45rem,3vw,2.15rem)] text-pretty" id="welcome-heading" tabIndex={-1} ref={heading}>
           {path === 'period' ? 'When did your last period start?' : path === 'check-in' ? 'How are you feeling today?' : 'Start with one entry'}
         </h2>
         {!path ? <>
-          <p className="muted">Use a date you remember, or start with how you feel today. No need to guess.</p>
-          <div className="welcome-options">
+          <p className="text-muted">Use a date you remember, or start with how you feel today. No need to guess.</p>
+          <div className="mt-[1.1rem] grid gap-[.65rem] [&>button]:text-left [&>button]:text-[.95rem] [&>button]:font-[690]">
             <button type="button" className="journal-action" disabled={busy} onClick={() => choose('period')}>I know my last period start</button>
             <button type="button" disabled={busy} onClick={() => choose('check-in')}>Start with today’s check-in</button>
           </div>
@@ -59,16 +59,16 @@ export function Welcome({ today, complete, signOut }: {
             void run(() => complete({ kind: 'check-in', day: today, mood }));
           }
         }}>
-          <fieldset className="welcome-fields" disabled={busy}>
+          <fieldset className="[&>label]:mt-[.85rem] [&>div[role=group]]:mt-[.85rem]" disabled={busy}>
             {path === 'period' ? <>
-              <p className="muted">Enter the first day of bleeding. An unknown end won’t be recorded as ongoing.</p>
+              <p className="text-muted">Enter the first day of bleeding. An unknown end won’t be recorded as ongoing.</p>
               <label>Start date<input type="date" required max={today} value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
               <ChoiceGroup name="period-end" label="Period end" choices={endChoices} value={endStatus} required
                 onChange={(value) => { if (value) setEndStatus(value); }} />
               {endStatus === 'date' && <label>End date<input type="date" required min={startDate || undefined} max={today}
                 value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>}
             </> : <>
-              <p className="muted">A short check-in is enough. You can add period dates in Calendar whenever you remember them.</p>
+              <p className="text-muted">A short check-in is enough. You can add period dates in Calendar whenever you remember them.</p>
               <ChoiceGroup name="mood" label="Mood" choices={moodChoices} value={mood || undefined} required
                 onChange={(value) => setMood(value ?? '')} />
             </>}
@@ -79,9 +79,9 @@ export function Welcome({ today, complete, signOut }: {
           </fieldset>
         </form>}
         <ErrorMessage>{error}</ErrorMessage>
-        <div className="welcome-meta">
+        <div className="mt-[1.15rem] border-t border-rule pt-[.65rem] text-[.81rem] text-muted">
           <p>Only you can see entries in the app. The database administrator can access stored records.</p>
-          <button type="button" className="quiet" disabled={busy} onClick={() => void run(signOut)}>Sign out</button>
+          <button type="button" className="quiet -ml-2" disabled={busy} onClick={() => void run(signOut)}>Sign out</button>
         </div>
       </section>
     </div>

@@ -48,15 +48,15 @@ export function SettingsScreen({ tracker, save, clear, signOut }: {
 
   return (
     <>
-      <div className="page-intro journal-intro">
+      <div className="page-intro">
         <h1>Settings</h1>
       </div>
-      <section className="journal-feature journal-split settings-feature" aria-labelledby="settings-feature-heading">
+      <section className="journal-feature journal-split mb-[clamp(.9rem,2.8vw,1.7rem)]" aria-labelledby="settings-feature-heading">
         <div>
-          <h2 className="journal-title" id="settings-feature-heading">Manage your journal</h2>
+          <h2 className="journal-title text-[clamp(1.65rem,4vw,2.8rem)]" id="settings-feature-heading">Manage your journal</h2>
           <p>Set reminders and period-end suggestions, or manage the records you’ve saved.</p>
         </div>
-        <img className="journal-art" src="/journal-records.svg" width="342" height="268" alt="" />
+        <img className="journal-art my-[-.55rem] max-w-52 phone:my-[-.35rem]" src="/journal-records.svg" width="342" height="268" alt="" />
       </section>
       <form onSubmit={(event) => {
         event.preventDefault();
@@ -66,10 +66,10 @@ export function SettingsScreen({ tracker, save, clear, signOut }: {
         }, 'Settings saved.');
       }}>
         <fieldset disabled={busy}>
-          <div className="settings-grid">
+          <div className="grid grid-cols-2 gap-[clamp(.85rem,2.5vw,1.5rem)] compact:grid-cols-1">
             <section className="journal-card">
               <h2>Period end suggestion</h2>
-              <p className="muted">This only suggests when a logged period might end. It doesn’t change your next-period forecast. Leave it blank to turn off suggestions.</p>
+              <p className="text-muted">This only suggests when a logged period might end. It doesn’t change your next-period forecast. Leave it blank to turn off suggestions.</p>
               <label className="short-input">Typical period length (days)
                 <input type="number" min="1" max="30" step="1" value={settings.typicalPeriodDays ?? ''}
                   onChange={(event) => setDraft({ ...settings, typicalPeriodDays: event.target.value ? Number(event.target.value) : null })} />
@@ -77,8 +77,8 @@ export function SettingsScreen({ tracker, save, clear, signOut }: {
             </section>
             <section className="journal-card">
               <h2>Reminders</h2>
-              <p className="muted">Shown on Today when you open Dottie. No lock-screen notifications.</p>
-              <div className="reminder-options">
+              <p className="text-muted">Shown on Today when you open Dottie. No lock-screen notifications.</p>
+              <div className="mt-2 [&>label]:flex [&>label]:min-h-[44px] [&>label]:cursor-pointer [&>label]:items-center [&>label]:gap-[.55rem]">
                 {(Object.keys(reminders) as (keyof typeof reminders)[]).map((key) => (
                   <label key={key}>
                     <input type="checkbox" checked={settings[key]} onChange={(event) => setDraft({ ...settings, [key]: event.target.checked })} />
@@ -88,17 +88,17 @@ export function SettingsScreen({ tracker, save, clear, signOut }: {
               </div>
             </section>
           </div>
-          <button className="primary settings-save" type="submit">{busy ? 'Working…' : 'Save settings'}</button>
+          <button className="primary mt-[.85rem] rounded-[.65rem]" type="submit">{busy ? 'Working…' : 'Save settings'}</button>
           {status('preferences')}
         </fieldset>
       </form>
-      <div className="settings-grid settings-private">
+      <div className="mt-[clamp(1rem,3vw,1.8rem)] grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start gap-[clamp(.85rem,2.5vw,1.5rem)] compact:grid-cols-1">
         <section className="journal-card">
           <h2>Your data</h2>
-          <p className="muted">Your JSON export includes all saved observations, including sexual activity and personal notes. Store it somewhere private.</p>
+          <p className="text-muted">Your JSON export includes all saved observations, including sexual activity and personal notes. Store it somewhere private.</p>
           <div className="actions">
             <button disabled={busy} onClick={() => perform('data', download, 'Export downloaded.')}>Download records</button>
-            {!confirm && <button className="quiet danger" disabled={busy} onClick={() => setConfirm(true)}>Delete tracking data</button>}
+            {!confirm && <button className="quiet text-danger" disabled={busy} onClick={() => setConfirm(true)}>Delete tracking data</button>}
           </div>
           {confirm && <div className="confirm">
             <p>Delete all period entries, daily logs, and tracking preferences? Your account will remain, but you’ll return to welcome setup. This can’t be undone.</p>
@@ -111,12 +111,12 @@ export function SettingsScreen({ tracker, save, clear, signOut }: {
               <button disabled={busy} onClick={() => setConfirm(false)}>Cancel</button>
             </div>
           </div>}
-          <p className="muted settings-data-note">The person who administers the database can access stored records.</p>
+          <p className="mt-[.85rem] text-muted">The person who administers the database can access stored records.</p>
           {status('data')}
         </section>
         <section className="journal-card">
           <h2>Account</h2>
-          <button className="quiet" disabled={busy} onClick={() => perform('account', signOut)}>Sign out</button>
+          <button className="quiet mt-[.35rem] -ml-2" disabled={busy} onClick={() => perform('account', signOut)}>Sign out</button>
           {status('account')}
         </section>
       </div>

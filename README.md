@@ -26,7 +26,7 @@ Public signup is disabled. The account command deliberately runs inside the API 
 
 ## Code layout
 
-- `web/src/` — Today, Calendar, Insights and Settings, period and daily editors, local reminders and forecast ranges.
+- `web/src/` — Today, Calendar, Insights and Settings, period and daily editors, local reminders and forecast ranges. The UI uses Tailwind CSS v4 with the Vite plugin; `web/src/styles.css` holds the theme and shared styles.
 - `api/src/` — Fastify HTTP routes and schemas, Better Auth, account provisioning and migration commands.
 - `db/migrations/` — Ordered SQL migrations, applied by the one-off Compose migration service. The runtime role cannot change the schema.
 - `compose.yaml` — Local frontend, API, migrations and Postgres. The database volume survives `docker compose down`.
