@@ -5,7 +5,7 @@ import { CycleOutlook } from './cycle-outlook.tsx';
 import { periodOnDay } from './cycle.ts';
 import { daysBetween, formatDay, todayDate } from './dates.ts';
 import { ErrorMessage, LogEditor, PeriodEditor, useAction, type PeriodInput } from './editors.tsx';
-import { currentForecast, forecastPeriodStart, suggestedPeriodEnd } from './forecast.ts';
+import { calendarPhasesOnDay, calendarPhaseWindows, currentForecast, estimateCyclePhases, forecastPeriodStart, suggestedPeriodEnd } from './forecast.ts';
 import { Insights } from './insights.tsx';
 import type { DailyLog, Observations, Period, Settings, SetupEntry, Tracker } from './model.ts';
 import { Navigation, type Tab } from './navigation.tsx';
@@ -219,11 +219,14 @@ export default function App() {
   const range = outlook.status === 'forecast' ? outlook : null;
   const latestPeriod = periods?.reduce<Period | undefined>((latest, entry) =>
     !latest || entry.startDate > latest.startDate ? entry : latest, undefined);
+  const phases = latestPeriod ? estimateCyclePhases(range, latestPeriod.startDate, latestPeriod.endDate) : null;
+  const phaseWindows = latestPeriod ? calendarPhaseWindows(latestPeriod.startDate, phases) : [];
   const active = periods?.find((entry) => entry.endDate === null && !entry.endUnknown && entry.startDate <= today);
   const suggestedEnd = active && tracker ? suggestedPeriodEnd(active.startDate, tracker.settings.typicalPeriodDays) : null;
   const confirmDue = !!suggestedEnd && suggestedEnd <= today;
   const recorded = !!(period?.endDate || period?.startDate === day);
   const selectedInForecast = range && range.from <= day && day <= range.to;
+  const selectedPhases = tab === 'Calendar' ? calendarPhasesOnDay(phaseWindows, day) : [];
   const reminders = tracker ? remindersForToday({
     today, settings: tracker.settings, hasDailyLog: !!dailyLog, hasOpenPeriod: !!active, suggestedEnd, forecast: range,
   }) : [];
@@ -289,7 +292,7 @@ export default function App() {
                 disabled={saving} select={calendarDay} />
             </section>
             <div className="grid items-start gap-[clamp(.9rem,2.8vw,1.7rem)] not-compact:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-              <CycleOutlook forecast={outlook} period={latestPeriod} startCount={tracker.periods.length}
+              <CycleOutlook forecast={outlook} period={latestPeriod} phases={phases} startCount={tracker.periods.length}
                 suggestedEnd={latestPeriod?.id === active?.id ? suggestedEnd : null} />
               <div className="grid gap-[.85rem]">
                 <section className="journal-card" aria-labelledby="today-log">
@@ -313,7 +316,8 @@ export default function App() {
             <p>Choose a day to view or update your records.</p>
           </div>
           <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start gap-[clamp(.85rem,2.5vw,1.5rem)] compact:grid-cols-1">
-            <Calendar tracker={tracker} today={today} range={range} suggestedEnd={suggestedEnd} selected={selected} disabled={saving} select={(date) => {
+            <Calendar tracker={tracker} today={today} range={range} phaseWindows={phaseWindows}
+              suggestedEnd={suggestedEnd} selected={selected} disabled={saving} select={(date) => {
               setEditor(null);
               setNotice('');
               setSelected(date);
@@ -330,6 +334,10 @@ export default function App() {
                   </div>
                   <img className="journal-art max-w-36 phone:max-w-[5.1rem]" src="/cycle-leaves.svg" width="342" height="268" alt="" />
                 </div>
+                {selectedPhases.length > 0 && <p className="mt-3 text-sm">
+                  <strong>Possible phases · low confidence</strong><br />
+                  {selectedPhases.map(({ label }) => label).join(' · ')}
+                </p>}
                 {day === suggestedEnd && <p className="suggestion rounded-[.65rem] text-plum">Suggested end date · not confirmed.</p>}
                 {day <= today && <div className="hero-actions phone:mt-[.7rem]">{periodButton('journal-action')}{logButton('hero-secondary')}</div>}
               </section>

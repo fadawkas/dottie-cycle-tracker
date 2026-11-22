@@ -94,6 +94,19 @@ export function estimateCyclePhases(forecast: CycleForecast | null, start: strin
   };
 }
 
+export function calendarPhaseWindows(start: string, phases: ReturnType<typeof estimateCyclePhases>) {
+  if (!phases) return [];
+  return [
+    { label: 'Follicular', from: start, to: phases.follicularEnd.to },
+    { label: 'Ovulation', ...phases.ovulation },
+    { label: 'Luteal', from: phases.lutealStart.from, to: phases.lutealEnd.to },
+  ];
+}
+
+export function calendarPhasesOnDay(windows: ReturnType<typeof calendarPhaseWindows>, day: string) {
+  return windows.filter(({ from, to }) => from <= day && day <= to);
+}
+
 export function forecastLabel({ from, to }: DateRange) {
   const differentYears = from.slice(0, 4) !== to.slice(0, 4);
   const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', ...(differentYears && { year: 'numeric' }) };

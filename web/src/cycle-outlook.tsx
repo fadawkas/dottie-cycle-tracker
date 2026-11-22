@@ -1,12 +1,12 @@
 import { formatDay } from './dates.ts';
-import { estimateCyclePhases, forecastLabel, MIN_INTERVALS, type currentForecast } from './forecast.ts';
+import { forecastLabel, MIN_INTERVALS, type currentForecast, type estimateCyclePhases } from './forecast.ts';
 import type { Period } from './model.ts';
 
-export function CycleOutlook({ forecast, period, suggestedEnd, startCount }: {
-  forecast: ReturnType<typeof currentForecast>; period?: Period; suggestedEnd: string | null; startCount: number;
+export function CycleOutlook({ forecast, period, phases, suggestedEnd, startCount }: {
+  forecast: ReturnType<typeof currentForecast>; period?: Period; phases: ReturnType<typeof estimateCyclePhases>;
+  suggestedEnd: string | null; startCount: number;
 }) {
   const range = forecast.status === 'forecast' ? forecast : null;
-  const phases = period && estimateCyclePhases(range, period.startDate, period.endDate);
   const minStarts = MIN_INTERVALS + 1;
   const unavailable = forecast.status === 'insufficient-history' ? 'Log a period start in Calendar to see a preliminary range.'
     : forecast.status === 'expired' ? 'The last estimated range has passed. Log your next start when it happens.'

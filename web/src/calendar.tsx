@@ -1,6 +1,6 @@
 import { addDays, formatDay, shiftMonth, utcDate } from './dates.ts';
 import { periodOnDay } from './cycle.ts';
-import type { ForecastRange } from './forecast.ts';
+import { calendarPhasesOnDay, type calendarPhaseWindows, type ForecastRange } from './forecast.ts';
 import type { Tracker } from './model.ts';
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -8,9 +8,11 @@ const confirmedDay = 'border border-plum bg-plum text-surface';
 const suggestedDay = 'border border-plum bg-apricot';
 const estimatedDay = 'border border-dashed border-control bg-lavender';
 const dayDot = 'inline-block size-[5px] rounded-full bg-current';
+const phaseMarker = 'inline-grid h-3 min-w-[9px] place-items-center rounded-xs bg-lavender text-[9px] leading-none font-bold text-plum';
 
-export function Calendar({ tracker, today, range, suggestedEnd, selected, select, disabled }: {
-  tracker: Tracker; today: string; range: ForecastRange | null; suggestedEnd: string | null;
+export function Calendar({ tracker, today, range, phaseWindows, suggestedEnd, selected, select, disabled }: {
+  tracker: Tracker; today: string; range: ForecastRange | null;
+  phaseWindows: ReturnType<typeof calendarPhaseWindows>; suggestedEnd: string | null;
   selected: string; select: (day: string) => void; disabled: boolean;
 }) {
   const month = selected.slice(0, 7) + '-01';
@@ -18,6 +20,7 @@ export function Calendar({ tracker, today, range, suggestedEnd, selected, select
   const offset = utcDate(month).getUTCDay();
   const monthLabel = formatDay(month, { month: 'long', year: 'numeric' });
   const cells = Array.from({ length: utcDate(addDays(nextMonth, -1)).getUTCDate() }, (_, index) => addDays(month, index));
+  const visibleWindows = phaseWindows.filter(({ from, to }) => from < nextMonth && to >= month);
   const loggedDays = new Set(tracker.dailyLogs.map(({ day }) => day));
   const rangeLabel = range?.basis === 'preliminary' ? 'Preliminary start range (low confidence)' : 'Estimated start range';
 
@@ -46,7 +49,9 @@ export function Calendar({ tracker, today, range, suggestedEnd, selected, select
           const suggested = !recorded && day === suggestedEnd;
           const predicted = !recorded && !suggested && !!range && range.from <= day && day <= range.to;
           const logged = loggedDays.has(day);
-          const status = [recorded && 'confirmed period', suggested && 'suggested period end', predicted && rangeLabel, logged && 'daily log'].filter(Boolean);
+          const phases = calendarPhasesOnDay(visibleWindows, day);
+          const status = [recorded && 'confirmed period', suggested && 'suggested period end', predicted && rangeLabel, logged && 'daily log',
+            ...phases.map(({ label }) => label === 'Ovulation' ? 'possible ovulation' : `possible ${label.toLowerCase()} phase`)].filter(Boolean);
           const appearance = recorded ? `${confirmedDay} enabled:hover:bg-plum aria-pressed:-outline-offset-4 aria-pressed:outline-surface`
             : `${suggested ? `${suggestedDay} enabled:hover:bg-apricot` : predicted ? `${estimatedDay} enabled:hover:bg-lavender` : 'border-rule'}
               aria-pressed:not-focus-visible:-outline-offset-2 aria-pressed:outline-plum`;
@@ -54,10 +59,14 @@ export function Calendar({ tracker, today, range, suggestedEnd, selected, select
             <button key={day} type="button" disabled={disabled} aria-pressed={selected === day} aria-current={day === today ? 'date' : undefined}
               aria-label={[formatDay(day, { month: 'long', day: 'numeric', year: 'numeric' }), ...status].join(', ')}
               className={`relative p-0 tabular-nums aria-pressed:outline-2 focus-visible:outline-dashed focus-visible:outline-offset-1
-                aria-[current=date]:[&>span:first-child]:underline aria-[current=date]:[&>span:first-child]:underline-offset-4 ${appearance}`}
+                aria-[current=date]:[&>span:first-child]:underline aria-[current=date]:[&>span:first-child]:underline-offset-4
+                ${visibleWindows.length ? 'pb-2.5' : ''} ${appearance}`}
               onClick={() => select(day)}>
               <span>{Number(day.slice(8))}</span>
-              {logged && <span className={`${dayDot} absolute bottom-1 left-[calc(50%-2.5px)]`} aria-hidden="true" />}
+              {logged && <span className={`${dayDot} absolute top-1 right-1`} aria-hidden="true" />}
+              {phases.length > 0 && <span className="absolute inset-x-0 bottom-[3px] flex justify-center gap-px" aria-hidden="true">
+                {phases.map(({ label }) => <span key={label} className={phaseMarker}>{label[0]}</span>)}
+              </span>}
             </button>
           );
         })}
@@ -68,6 +77,15 @@ export function Calendar({ tracker, today, range, suggestedEnd, selected, select
         <span><i className={`${estimatedDay} h-3 w-3.5`} /> {rangeLabel}</span>
         <span><i className={dayDot} /> Daily log</span>
       </div>
+      {visibleWindows.length > 0 && <div className="mt-3 border-t border-rule pt-3 text-[.78rem] text-muted">
+        <p><strong>Estimated phases · low confidence</strong></p>
+        <ul className="my-1 flex list-none flex-wrap gap-x-3 gap-y-1 p-0">
+          {phaseWindows.map(({ label }) => <li key={label} className="flex items-center gap-1">
+            <span className={phaseMarker} aria-hidden="true">{label[0]}</span> {label}
+          </li>)}
+        </ul>
+        <p>Phase windows can overlap. Period dates alone can’t confirm ovulation.</p>
+      </div>}
     </section>
   );
 }
