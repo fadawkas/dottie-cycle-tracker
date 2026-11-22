@@ -1,9 +1,10 @@
 import { addDays, daysBetween, formatDay } from './dates.ts';
-import { calQuantile, literatureParams, personalState, predictive } from '../vendor/dochia/dochia.mjs';
+import { calCdf, calQuantile, literatureParams, personalState, predictive } from '../vendor/dochia/dochia.mjs';
 
 type DateRange = { from: string; to: string };
 export type ForecastRange = DateRange & { status: 'forecast'; basis: 'preliminary' | 'history'; expected: string };
-type Forecast = ForecastRange | { status: 'insufficient-history' }
+type CycleForecast = ForecastRange & { ovulation: DateRange | null };
+type Forecast = CycleForecast | { status: 'insufficient-history' }
   | { status: 'abstained'; reason: 'unusual-interval' | 'long-gap' | 'variable-history' };
 
 export const MIN_INTERVALS = 3;
@@ -12,6 +13,29 @@ const params = literatureParams();
 const preliminaryDays = { min: 24, max: 38 };
 // Broad calendar assumption only; a logged period cannot confirm ovulation.
 const lutealDays = { min: 11, max: 17 };
+const lowerPercentile = 0.1;
+const upperPercentile = 0.9;
+
+function estimateOvulation(distribution: ReturnType<typeof predictive>, start: string, upperOnset: number) {
+  let firstDay: number | null = null;
+  const offsetCount = lutealDays.max - lutealDays.min + 1;
+  // Each scenario pairs a next-start day with one of seven equally weighted
+  // offsets. P(ovulation <= d) averages P(next start <= d + offset).
+  const latestDay = Math.ceil(upperOnset) - lutealDays.min;
+  for (let day = 0; day <= latestDay; day++) {
+    let sum = 0;
+    for (let offset = lutealDays.min; offset <= lutealDays.max; offset++) {
+      sum += calCdf(distribution, day + offset + 0.5); // Round modeled onset to a calendar day.
+    }
+    const probability = sum / offsetCount;
+    if (day === 0 && probability >= lowerPercentile) return null;
+    if (firstDay === null && probability >= lowerPercentile) firstDay = day;
+    if (firstDay !== null && probability >= upperPercentile) {
+      return { from: addDays(start, firstDay), to: addDays(start, day) };
+    }
+  }
+  return null;
+}
 
 export function forecastPeriodStart(startDates: readonly string[]): Forecast {
   if (startDates.some((day) => {
@@ -40,13 +64,14 @@ export function forecastPeriodStart(startDates: readonly string[]): Forecast {
     return { status: 'abstained', reason: 'unusual-interval' };
   }
 
-  // Only compute onset quantiles, not the upstream fertility/ovulation output.
   const distribution = predictive(preliminary ? personalState([], params) : state, params);
+  const upperOnset = calQuantile(distribution, upperPercentile);
   return {
     status: 'forecast', basis: preliminary ? 'preliminary' : 'history',
     expected: addDays(last, Math.round(calQuantile(distribution, 0.5))),
-    from: addDays(last, Math.ceil(calQuantile(distribution, 0.1))),
-    to: addDays(last, Math.floor(calQuantile(distribution, 0.9))),
+    from: addDays(last, Math.ceil(calQuantile(distribution, lowerPercentile))),
+    to: addDays(last, Math.floor(upperOnset)),
+    ovulation: estimateOvulation(distribution, last, upperOnset),
   };
 }
 
@@ -54,12 +79,9 @@ export function currentForecast(forecast: Forecast, today: string) {
   return forecast.status === 'forecast' && forecast.to < today ? { status: 'expired' } as const : forecast;
 }
 
-export function estimateCyclePhases(forecast: ForecastRange | null, start: string, recordedEnd: string | null) {
-  if (!forecast) return null;
-  // With no personal forecast, show phase timing for a typical cycle scenario,
-  // not an ovulation prediction interval derived from the whole population range.
-  const onset = forecast.basis === 'preliminary' ? { from: forecast.expected, to: forecast.expected } : forecast;
-  const ovulation = { from: addDays(onset.from, -lutealDays.max), to: addDays(onset.to, -lutealDays.min) };
+export function estimateCyclePhases(forecast: CycleForecast | null, start: string, recordedEnd: string | null) {
+  if (!forecast?.ovulation) return null;
+  const { ovulation } = forecast;
   // Don't label dates as plausible if the window conflicts with the period
   // record or is so wide that it overlaps the next-start window.
   if (ovulation.from <= (recordedEnd ?? start) || ovulation.to >= forecast.from) return null;

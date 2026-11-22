@@ -167,8 +167,9 @@ export function Insights({ tracker, openCalendar }: { tracker: Tracker; openCale
     </div>
     <details className="disclosure group/disclosure mt-[clamp(1rem,3vw,1.7rem)] border-t border-control" id="forecast-method">
       <summary>How your forecast works <Chevron /></summary>
-      <p className="text-muted">After one period start, Dottie uses a population model for a low-confidence next-period window. From four starts, the same model can use your recent start-to-start intervals. Daily logs and bleeding length don’t change the next-start estimate. Sparse or variable history can limit what’s shown.</p>
-      <p className="text-muted">Early phase dates show a typical cycle scenario. Once a personal forecast is available, phase dates use your estimated next-period window. Both use a general assumption about timing after ovulation. They’re calendar estimates, not evidence that ovulation happened. Estimates run in your browser and aren’t for contraception. <a href="/licenses/dochia.txt">Model license (MIT)</a></p>
+      <p className="text-muted">With one logged period start, Dottie uses typical cycle lengths to estimate when your next period might start. From four logged starts, it can also use the time between your recent starts. Bleeding length and daily check-ins don’t change that window.</p>
+      <p className="text-muted">To estimate the other phases, Dottie considers several possible next-period dates and assumes ovulation could happen 11–17 days before each one. It uses that timing to estimate when the follicular phase ends and the luteal phase begins. If the dates are too uncertain or overlap your recorded bleeding, Dottie may leave them out.</p>
+      <p className="text-muted">Estimates run in your browser. Period dates alone can’t tell you when or whether you ovulated. Don’t use these estimates for contraception.</p>
     </details>
   </div>;
 }

@@ -55,3 +55,26 @@ synthetic shifting-length fixture, coverage was only **4 of 10**.
 **Use the model for ranges and abstention, not an accuracy claim.** Point
 accuracy was effectively the same on matched cases. These results are for a selected cohort also used in upstream
 validation, not an external replication or evidence of clinical performance.
+
+## Phase-window benchmark
+
+To compare the old calendar rule with the distribution-based approach, run from `web/`:
+
+```sh
+node experiments/forecast/phase-benchmark.mjs < /path/to/authorized-cases.json
+```
+
+Provide a JSON array of `{"starts":["2025-11-13"],"reference":"2025-12-04"}`
+cases (example dates are synthetic). Use only starts known when the forecast
+was made; never include the next start. Keep the hormone-derived reference
+date out of the forecast inputs. Run first-start and history-based cases
+separately to distinguish how each model behaves with sparse history.
+
+The tool reports how many windows each rule issued, how often the reference
+fell inside, and the mean window width. The paired results compare cases where
+both rules issued a window. Use the reported case count to account for
+abstention. No participant data should be added to the repository.
+[mcPHASES](https://physionet.org/content/mcphases/1.0.0/) is a candidate for
+research evaluation but requires an account and signed data-use agreement.
+Synthetic cases test scoring behavior; no phase-accuracy result on reference
+data has been established.

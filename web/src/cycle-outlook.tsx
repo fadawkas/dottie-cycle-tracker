@@ -27,7 +27,7 @@ export function CycleOutlook({ forecast, period, suggestedEnd, startCount }: {
 
     {period && <>
       {phases && <p className="mt-3 text-sm text-muted"><strong>Low confidence for phase dates.</strong>{' '}
-        {range?.basis === 'preliminary' && 'These dates show how a typical cycle might look, not when you personally ovulate. '}
+        {range?.basis === 'preliminary' && 'Based on typical timing, not your personal history. '}
         Period dates can’t confirm ovulation. Not for contraception.
       </p>}
       <dl className="mt-3 divide-y divide-rule border-t border-rule [&>div]:grid [&>div]:gap-1 [&>div]:py-2.5 [&_dt]:font-[700] [&_dd]:m-0 [&_dd]:text-muted">
@@ -54,7 +54,7 @@ export function CycleOutlook({ forecast, period, suggestedEnd, startCount }: {
           </div>
         </>}
       </dl>
-      {!phases && <p className="mt-2 text-sm text-muted">Follicular, ovulation, and luteal dates aren’t estimated for this cycle.</p>}
+      {!phases && <p className="mt-2 text-sm text-muted">Timing is too uncertain to show follicular, ovulation, and luteal dates for this cycle.</p>}
     </>}
   </section>;
 }

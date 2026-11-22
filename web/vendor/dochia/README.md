@@ -6,5 +6,5 @@ The JavaScript reference embeds the published literature priors; this copy does
 not include model weights fitted to restricted datasets or any participant data.
 The app calls only the next-onset distribution functions. It does not use or
 expose Dochia’s ovulation or fertile-window outputs. Dottie derives its own
-approximate phase dates using the typical next onset for preliminary forecasts
-and the next-onset range for history-based forecasts. Estimates run in the browser.
+approximate phase dates using the next-onset distribution and a separate luteal
+timing assumption. Estimates run in the browser.
