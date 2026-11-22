@@ -27,8 +27,7 @@ export function CycleOutlook({ forecast, period, phases, suggestedEnd, startCoun
 
     {period && <>
       {phases && <p className="mt-3 text-sm text-muted"><strong>Low confidence for phase dates.</strong>{' '}
-        {range?.basis === 'preliminary' && 'Based on typical timing, not your personal history. '}
-        Period dates can’t confirm ovulation. Not for contraception.
+        {range?.basis === 'preliminary' && 'Based on typical timing, not your personal history.'}
       </p>}
       <dl className="mt-3 divide-y divide-rule border-t border-rule [&>div]:grid [&>div]:gap-1 [&>div]:py-2.5 [&_dt]:font-[700] [&_dd]:m-0 [&_dd]:text-muted">
         <div>

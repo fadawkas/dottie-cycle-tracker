@@ -111,7 +111,7 @@ export function Calendar({ tracker, today, range, phaseOnDay, ovulationWindow, s
         </ul>
         {ovulationWindow && <div className="border-t border-rule pt-3 text-sm text-muted">
           <p><strong>Estimated ovulation window:</strong> {forecastLabel(ovulationWindow)}. The grid shows only the top-ranked phase for each day, not the full ovulation window.</p>
-          <p className="mt-2">Phase estimates are low confidence. Period dates can’t confirm ovulation. Not for contraception.</p>
+          <p className="mt-2">Phase estimates are low confidence.</p>
         </div>}
         {range?.basis === 'preliminary' && <p className="mt-3 text-sm text-muted">The preliminary start range is based on typical cycle lengths, not your own history.</p>}
       </dialog>
