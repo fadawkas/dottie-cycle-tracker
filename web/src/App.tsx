@@ -5,7 +5,7 @@ import { CycleOutlook } from './cycle-outlook.tsx';
 import { periodOnDay } from './cycle.ts';
 import { daysBetween, formatDay, todayDate } from './dates.ts';
 import { ErrorMessage, LogEditor, PeriodEditor, useAction, type PeriodInput } from './editors.tsx';
-import { calendarPhasesOnDay, calendarPhaseWindows, currentForecast, estimateCyclePhases, forecastPeriodStart, suggestedPeriodEnd } from './forecast.ts';
+import { calendarPhaseOnDay, currentForecast, estimateCyclePhases, forecastPeriodStart, suggestedPeriodEnd } from './forecast.ts';
 import { Insights } from './insights.tsx';
 import type { DailyLog, Observations, Period, Settings, SetupEntry, Tracker } from './model.ts';
 import { Navigation, type Tab } from './navigation.tsx';
@@ -220,13 +220,14 @@ export default function App() {
   const latestPeriod = periods?.reduce<Period | undefined>((latest, entry) =>
     !latest || entry.startDate > latest.startDate ? entry : latest, undefined);
   const phases = latestPeriod ? estimateCyclePhases(range, latestPeriod.startDate, latestPeriod.endDate) : null;
-  const phaseWindows = latestPeriod ? calendarPhaseWindows(latestPeriod.startDate, phases) : [];
+  const phaseOnDay = (date: string) => latestPeriod ? calendarPhaseOnDay(range, phases, latestPeriod.startDate, date) : undefined;
   const active = periods?.find((entry) => entry.endDate === null && !entry.endUnknown && entry.startDate <= today);
   const suggestedEnd = active && tracker ? suggestedPeriodEnd(active.startDate, tracker.settings.typicalPeriodDays) : null;
   const confirmDue = !!suggestedEnd && suggestedEnd <= today;
   const recorded = !!(period?.endDate || period?.startDate === day);
-  const selectedInForecast = range && range.from <= day && day <= range.to;
-  const selectedPhases = tab === 'Calendar' ? calendarPhasesOnDay(phaseWindows, day) : [];
+  const selectedSuggested = !recorded && day === suggestedEnd;
+  const selectedInForecast = !recorded && !selectedSuggested && range && range.from <= day && day <= range.to;
+  const selectedPhase = recorded || selectedSuggested || selectedInForecast ? undefined : phaseOnDay(day);
   const reminders = tracker ? remindersForToday({
     today, settings: tracker.settings, hasDailyLog: !!dailyLog, hasOpenPeriod: !!active, suggestedEnd, forecast: range,
   }) : [];
@@ -313,33 +314,30 @@ export default function App() {
         {tracker && ready && tab === 'Calendar' && <>
           <div className="page-intro">
             <h1>Calendar</h1>
-            <p>Choose a day to view or update your records.</p>
+            <p>Your period records and cycle estimates.</p>
           </div>
-          <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start gap-[clamp(.85rem,2.5vw,1.5rem)] compact:grid-cols-1">
-            <Calendar tracker={tracker} today={today} range={range} phaseWindows={phaseWindows}
+          <div className="grid grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)] items-start gap-[clamp(.85rem,2.5vw,1.5rem)] compact:grid-cols-1">
+            <Calendar tracker={tracker} today={today} range={range} phaseOnDay={phaseOnDay} ovulationWindow={phases?.ovulation}
               suggestedEnd={suggestedEnd} selected={selected} disabled={saving} select={(date) => {
               setEditor(null);
               setNotice('');
               setSelected(date);
             }} />
             <div className="grid min-w-0 gap-[.85rem]">
-              <section className="journal-feature p-[clamp(1rem,2.8vw,1.65rem)]" aria-labelledby="day-heading">
-                <div className="journal-split not-phone:grid-cols-[minmax(0,1fr)_minmax(4rem,.42fr)]">
-                  <div>
-                    <h2 className="journal-title text-[clamp(1.35rem,2.65vw,2.25rem)]" id="day-heading">{formatDay(day, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
-                    <p className="not-phone:mt-2">{period?.endUnknown ? 'Confirmed start. End date unknown.' : recorded ? 'Confirmed period day.' : period ? 'Open period. This day isn’t confirmed.'
-                      : selectedInForecast ? range.basis === 'preliminary' ? 'Part of your preliminary start range · low confidence.'
-                        : 'Part of your estimated start range.' : 'No period logged.'}
-                      {dailyLog ? ' Daily log saved.' : ''}</p>
-                  </div>
-                  <img className="journal-art max-w-36 phone:max-w-[5.1rem]" src="/cycle-leaves.svg" width="342" height="268" alt="" />
+              <section className="journal-card" aria-labelledby="day-heading">
+                <div aria-live="polite">
+                  <p className="mb-1 text-xs font-semibold text-muted">Selected day</p>
+                  <h2 id="day-heading">{formatDay(day, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+                  <p className="mt-3 text-sm font-semibold">{recorded ? (period?.endUnknown ? 'Confirmed start. End date unknown.' : 'Confirmed period day.')
+                    : selectedSuggested ? 'Suggested period end · not confirmed'
+                    : selectedInForecast ? (range.basis === 'preliminary' ? 'Preliminary period start range' : 'Estimated period start range')
+                    : selectedPhase ? `Estimated ${selectedPhase.toLowerCase()}${selectedPhase === 'Ovulation' ? '' : ' phase'}`
+                    : period ? 'Open period. This day isn’t confirmed.' : 'No period logged.'}</p>
+                  {(selectedPhase || (selectedInForecast && range.basis === 'preliminary')) && <p className="text-sm text-muted">Low confidence</p>}
+                  {period && !recorded && selectedPhase && <p className="text-sm text-muted">Open period. This day isn’t confirmed.</p>}
+                  {dailyLog && <p className="text-sm text-muted">Daily log saved.</p>}
                 </div>
-                {selectedPhases.length > 0 && <p className="mt-3 text-sm">
-                  <strong>Possible phases · low confidence</strong><br />
-                  {selectedPhases.map(({ label }) => label).join(' · ')}
-                </p>}
-                {day === suggestedEnd && <p className="suggestion rounded-[.65rem] text-plum">Suggested end date · not confirmed.</p>}
-                {day <= today && <div className="hero-actions phone:mt-[.7rem]">{periodButton('journal-action')}{logButton('hero-secondary')}</div>}
+                {day <= today && <div className="actions border-t border-rule pt-3">{periodButton('primary text-sm')}{logButton('text-sm')}</div>}
               </section>
               {periodEditor && <div className="journal-card [&>section]:m-0 [&>section]:border-0 [&>section]:p-0">{periodEditor}</div>}
             </div>

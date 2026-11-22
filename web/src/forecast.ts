@@ -3,7 +3,8 @@ import { calCdf, calQuantile, literatureParams, personalState, predictive } from
 
 type DateRange = { from: string; to: string };
 export type ForecastRange = DateRange & { status: 'forecast'; basis: 'preliminary' | 'history'; expected: string };
-type CycleForecast = ForecastRange & { ovulation: DateRange | null };
+export type CalendarPhase = 'Follicular' | 'Ovulation' | 'Luteal';
+type CycleForecast = ForecastRange & { ovulation: DateRange | null; ovulationDayPhases: CalendarPhase[] };
 type Forecast = CycleForecast | { status: 'insufficient-history' }
   | { status: 'abstained'; reason: 'unusual-interval' | 'long-gap' | 'variable-history' };
 
@@ -18,6 +19,8 @@ const upperPercentile = 0.9;
 
 function estimateOvulation(distribution: ReturnType<typeof predictive>, start: string, upperOnset: number) {
   let firstDay: number | null = null;
+  let previous = 0;
+  const dayPhases: CalendarPhase[] = [];
   const offsetCount = lutealDays.max - lutealDays.min + 1;
   // Each scenario pairs a next-start day with one of seven equally weighted
   // offsets. P(ovulation <= d) averages P(next start <= d + offset).
@@ -30,9 +33,18 @@ function estimateOvulation(distribution: ReturnType<typeof predictive>, start: s
     const probability = sum / offsetCount;
     if (day === 0 && probability >= lowerPercentile) return null;
     if (firstDay === null && probability >= lowerPercentile) firstDay = day;
-    if (firstDay !== null && probability >= upperPercentile) {
-      return { from: addDays(start, firstDay), to: addDays(start, day) };
+    if (firstDay !== null) {
+      // The same model gives the chance ovulation is after, on, or before this day.
+      // A cycle that has already restarted doesn't count as luteal.
+      const follicular = 1 - probability;
+      const ovulation = probability - previous;
+      const luteal = previous - calCdf(distribution, day + 0.5);
+      dayPhases.push(follicular >= Math.max(ovulation, luteal) ? 'Follicular' : luteal >= ovulation ? 'Luteal' : 'Ovulation');
+      if (probability >= upperPercentile) {
+        return { window: { from: addDays(start, firstDay), to: addDays(start, day) }, dayPhases };
+      }
     }
+    previous = probability;
   }
   return null;
 }
@@ -66,12 +78,14 @@ export function forecastPeriodStart(startDates: readonly string[]): Forecast {
 
   const distribution = predictive(preliminary ? personalState([], params) : state, params);
   const upperOnset = calQuantile(distribution, upperPercentile);
+  const ovulation = estimateOvulation(distribution, last, upperOnset);
   return {
     status: 'forecast', basis: preliminary ? 'preliminary' : 'history',
     expected: addDays(last, Math.round(calQuantile(distribution, 0.5))),
     from: addDays(last, Math.ceil(calQuantile(distribution, lowerPercentile))),
     to: addDays(last, Math.floor(upperOnset)),
-    ovulation: estimateOvulation(distribution, last, upperOnset),
+    ovulation: ovulation?.window ?? null,
+    ovulationDayPhases: ovulation?.dayPhases ?? [],
   };
 }
 
@@ -94,17 +108,12 @@ export function estimateCyclePhases(forecast: CycleForecast | null, start: strin
   };
 }
 
-export function calendarPhaseWindows(start: string, phases: ReturnType<typeof estimateCyclePhases>) {
-  if (!phases) return [];
-  return [
-    { label: 'Follicular', from: start, to: phases.follicularEnd.to },
-    { label: 'Ovulation', ...phases.ovulation },
-    { label: 'Luteal', from: phases.lutealStart.from, to: phases.lutealEnd.to },
-  ];
-}
-
-export function calendarPhasesOnDay(windows: ReturnType<typeof calendarPhaseWindows>, day: string) {
-  return windows.filter(({ from, to }) => from <= day && day <= to);
+export function calendarPhaseOnDay(forecast: CycleForecast | null, phases: ReturnType<typeof estimateCyclePhases>,
+  start: string, day: string): CalendarPhase | undefined {
+  if (!forecast || !phases || day <= start || day >= forecast.from) return;
+  if (day < phases.ovulation.from) return 'Follicular';
+  if (day > phases.ovulation.to) return 'Luteal';
+  return forecast.ovulationDayPhases[daysBetween(phases.ovulation.from, day)];
 }
 
 export function forecastLabel({ from, to }: DateRange) {

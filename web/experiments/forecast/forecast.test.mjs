@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { scoreCohort } from './benchmark.mjs';
 import { scorePhaseWindows } from './phase-benchmark.mjs';
-import { calendarPhasesOnDay, calendarPhaseWindows, currentForecast, estimateCyclePhases, forecastLabel, forecastPeriodStart, suggestedPeriodEnd } from '../../src/forecast.ts';
+import { calendarPhaseOnDay, currentForecast, estimateCyclePhases, forecastLabel, forecastPeriodStart, suggestedPeriodEnd } from '../../src/forecast.ts';
 
 test('one to three starts yield a narrower population-based window', () => {
   const starts = ['2025-01-31', '2025-02-28', '2025-03-28'];
   assert.deepEqual(forecastPeriodStart([]), { status: 'insufficient-history' });
-  assert.deepEqual(forecastPeriodStart(starts.slice(0, 1)), {
+  const { ovulationDayPhases, ...forecast } = forecastPeriodStart(starts.slice(0, 1));
+  assert.equal(ovulationDayPhases.length, 14);
+  assert.deepEqual(forecast, {
     status: 'forecast', basis: 'preliminary', from: '2025-02-24', expected: '2025-03-01', to: '2025-03-07',
     ovulation: { from: '2025-02-09', to: '2025-02-22' },
   });
@@ -33,20 +35,22 @@ test('one logged period shows phase windows that account for uncertainty in the 
   assert.equal(estimateCyclePhases(forecast, start, '2025-11-22'), null);
 });
 
-test('calendar shows overlapping possible phases only within their date spans', () => {
+test('calendar ranks overlapping phase estimates and leaves the next-start range to the period forecast', () => {
   const start = '2025-11-13';
   const forecast = forecastPeriodStart([start]);
-  const windows = calendarPhaseWindows(start, estimateCyclePhases(forecast, start, '2025-11-20'));
-  const labels = (day) => calendarPhasesOnDay(windows, day).map(({ label }) => label);
-  assert.deepEqual(labels('2025-11-12'), []);
-  assert.deepEqual(labels(start), ['Follicular']);
-  assert.deepEqual(labels('2025-11-22'), ['Follicular', 'Ovulation']);
-  assert.deepEqual(labels('2025-11-23'), ['Follicular', 'Ovulation', 'Luteal']);
-  assert.deepEqual(labels('2025-12-05'), ['Ovulation', 'Luteal']);
-  assert.deepEqual(labels('2025-12-06'), ['Luteal']);
-  assert.deepEqual(labels('2025-12-17'), ['Luteal']);
-  assert.deepEqual(labels('2025-12-18'), []);
-  assert.deepEqual(calendarPhaseWindows(start, estimateCyclePhases(forecast, start, '2025-11-22')), []);
+  const phases = estimateCyclePhases(forecast, start, '2025-11-20');
+  const label = (day) => calendarPhaseOnDay(forecast, phases, start, day);
+  assert.equal(label('2025-11-12'), undefined);
+  assert.equal(label(start), undefined);
+  assert.equal(label('2025-11-21'), 'Follicular');
+  assert.equal(label('2025-11-22'), 'Follicular');
+  assert.equal(label('2025-11-27'), 'Follicular');
+  assert.equal(label('2025-11-28'), 'Luteal');
+  assert.equal(label('2025-12-05'), 'Luteal');
+  assert.equal(label('2025-12-06'), 'Luteal');
+  assert.equal(label(forecast.from), undefined);
+  assert.equal(label(forecast.to), undefined);
+  assert.equal(calendarPhaseOnDay(forecast, estimateCyclePhases(forecast, start, '2025-11-22'), start, '2025-11-23'), undefined);
 });
 
 test('invalid and duplicate dates do not produce a forecast', () => {
