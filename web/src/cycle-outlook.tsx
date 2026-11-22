@@ -18,7 +18,7 @@ export function CycleOutlook({ forecast, period, suggestedEnd, startCount }: {
     {range ? <>
       <p className="my-1 text-[clamp(1.5rem,5.5vw,2.35rem)] leading-tight font-[750] tracking-[-.035em]">{forecastLabel(range)}</p>
       {range.basis === 'preliminary'
-        ? <p className="text-muted"><strong>Low confidence</strong> · This is a general adult cycle range, not your personal pattern.</p>
+        ? <p className="text-muted"><strong>Low confidence</strong> · Based on a population model, not your personal cycle history. Your next period could start outside this window.</p>
         : <p className="text-muted"><strong>Based on your history</strong> · The dates can still shift.</p>}
     </> : <p className="text-muted">{unavailable}</p>}
     {startCount > 0 && startCount < minStarts && <p className="mt-2 text-sm text-muted">
@@ -26,7 +26,10 @@ export function CycleOutlook({ forecast, period, suggestedEnd, startCount }: {
     </p>}
 
     {period && <>
-      {phases && <p className="mt-3 text-sm text-muted">Low confidence for phase dates. Period dates can’t confirm ovulation. Not for contraception.</p>}
+      {phases && <p className="mt-3 text-sm text-muted"><strong>Low confidence for phase dates.</strong>{' '}
+        {range?.basis === 'preliminary' && 'These dates show how a typical cycle might look, not when you personally ovulate. '}
+        Period dates can’t confirm ovulation. Not for contraception.
+      </p>}
       <dl className="mt-3 divide-y divide-rule border-t border-rule [&>div]:grid [&>div]:gap-1 [&>div]:py-2.5 [&_dt]:font-[700] [&_dd]:m-0 [&_dd]:text-muted">
         <div>
           <dt>Menstruation</dt>

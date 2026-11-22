@@ -2,15 +2,13 @@ import { addDays, daysBetween, formatDay } from './dates.ts';
 import { calQuantile, literatureParams, personalState, predictive } from '../vendor/dochia/dochia.mjs';
 
 type DateRange = { from: string; to: string };
-export type ForecastRange = DateRange & { status: 'forecast' } & (
-  { basis: 'preliminary' } | { basis: 'history'; expected: string }
-);
+export type ForecastRange = DateRange & { status: 'forecast'; basis: 'preliminary' | 'history'; expected: string };
 type Forecast = ForecastRange | { status: 'insufficient-history' }
   | { status: 'abstained'; reason: 'unusual-interval' | 'long-gap' | 'variable-history' };
 
 export const MIN_INTERVALS = 3;
 const params = literatureParams();
-// Population reference, not a personalized probability interval.
+// Population reference for screening sparse history, not the displayed window.
 const preliminaryDays = { min: 24, max: 38 };
 // Broad calendar assumption only; a logged period cannot confirm ovulation.
 const lutealDays = { min: 11, max: 17 };
@@ -37,20 +35,15 @@ export function forecastPeriodStart(startDates: readonly string[]): Forecast {
   if (state.abstain) return { status: 'abstained', reason: state.gap ? 'long-gap' : 'variable-history' };
 
   const last = recent[recent.length - 1];
-  if (lengths.length < MIN_INTERVALS) {
-    if (lengths.some((length) => length < preliminaryDays.min || length > preliminaryDays.max)) {
-      return { status: 'abstained', reason: 'unusual-interval' };
-    }
-    return {
-      status: 'forecast', basis: 'preliminary',
-      from: addDays(last, preliminaryDays.min), to: addDays(last, preliminaryDays.max),
-    };
+  const preliminary = lengths.length < MIN_INTERVALS;
+  if (preliminary && lengths.some((length) => length < preliminaryDays.min || length > preliminaryDays.max)) {
+    return { status: 'abstained', reason: 'unusual-interval' };
   }
 
   // Only compute onset quantiles, not the upstream fertility/ovulation output.
-  const distribution = predictive(state, params);
+  const distribution = predictive(preliminary ? personalState([], params) : state, params);
   return {
-    status: 'forecast', basis: 'history',
+    status: 'forecast', basis: preliminary ? 'preliminary' : 'history',
     expected: addDays(last, Math.round(calQuantile(distribution, 0.5))),
     from: addDays(last, Math.ceil(calQuantile(distribution, 0.1))),
     to: addDays(last, Math.floor(calQuantile(distribution, 0.9))),
@@ -62,8 +55,11 @@ export function currentForecast(forecast: Forecast, today: string) {
 }
 
 export function estimateCyclePhases(forecast: ForecastRange | null, start: string, recordedEnd: string | null) {
-  if (forecast?.basis !== 'history') return null;
-  const ovulation = { from: addDays(forecast.from, -lutealDays.max), to: addDays(forecast.to, -lutealDays.min) };
+  if (!forecast) return null;
+  // With no personal forecast, show phase timing for a typical cycle scenario,
+  // not an ovulation prediction interval derived from the whole population range.
+  const onset = forecast.basis === 'preliminary' ? { from: forecast.expected, to: forecast.expected } : forecast;
+  const ovulation = { from: addDays(onset.from, -lutealDays.max), to: addDays(onset.to, -lutealDays.min) };
   // Don't label dates as plausible if the window conflicts with the period
   // record or is so wide that it overlaps the next-start window.
   if (ovulation.from <= (recordedEnd ?? start) || ovulation.to >= forecast.from) return null;

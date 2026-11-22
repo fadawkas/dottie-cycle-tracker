@@ -167,8 +167,8 @@ export function Insights({ tracker, openCalendar }: { tracker: Tracker; openCale
     </div>
     <details className="disclosure group/disclosure mt-[clamp(1rem,3vw,1.7rem)] border-t border-control" id="forecast-method">
       <summary>How your forecast works <Chevron /></summary>
-      <p className="text-muted">After one period start, Dottie can show a broad, low-confidence range based on cycles of 24–38 days. From four starts, the Dochia model can use your recent start-to-start intervals. Daily logs and bleeding length don’t change the next-start estimate. Sparse or variable history can limit what’s shown.</p>
-      <p className="text-muted">Phase dates use the history-based range and a general assumption about timing after ovulation. They’re calendar estimates, not evidence that ovulation happened. Estimates run in your browser and aren’t for contraception. <a href="/licenses/dochia.txt">Model license (MIT)</a></p>
+      <p className="text-muted">After one period start, Dottie uses a population model for a low-confidence next-period window. From four starts, the same model can use your recent start-to-start intervals. Daily logs and bleeding length don’t change the next-start estimate. Sparse or variable history can limit what’s shown.</p>
+      <p className="text-muted">Early phase dates show a typical cycle scenario. Once a personal forecast is available, phase dates use your estimated next-period window. Both use a general assumption about timing after ovulation. They’re calendar estimates, not evidence that ovulation happened. Estimates run in your browser and aren’t for contraception. <a href="/licenses/dochia.txt">Model license (MIT)</a></p>
     </details>
   </div>;
 }

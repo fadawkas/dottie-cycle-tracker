@@ -13,7 +13,7 @@ test('reminders respect opt-in, local date boundaries and what was logged', () =
   assert.deepEqual(remindersForToday({ ...base, settings: { ...settings, remindDaily: false } }), []);
   assert.deepEqual(remindersForToday(base), ['check-in']);
   assert.deepEqual(remindersForToday({ ...base, today: '2025-01-31' }), ['check-in', 'upcoming-period']);
-  const preliminary = { status: 'forecast' as const, basis: 'preliminary' as const, from: forecast.from, to: forecast.to };
+  const preliminary = { ...forecast, basis: 'preliminary' as const };
   assert.deepEqual(remindersForToday({ ...base, today: '2025-01-31', forecast: preliminary }), ['check-in']);
   assert.deepEqual(remindersForToday({ ...base, today: '2025-02-09', hasDailyLog: true }), []);
   const open = { ...base, today: '2025-02-03', suggestedEnd: '2025-02-02', hasOpenPeriod: true, hasDailyLog: true };

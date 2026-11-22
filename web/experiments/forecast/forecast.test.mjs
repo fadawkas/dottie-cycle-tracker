@@ -3,20 +3,32 @@ import { test } from 'node:test';
 import { scoreCohort } from './benchmark.mjs';
 import { currentForecast, estimateCyclePhases, forecastLabel, forecastPeriodStart, suggestedPeriodEnd } from '../../src/forecast.ts';
 
-test('one to three starts yield a preliminary range and no phase estimates', () => {
+test('one to three starts yield a narrower population-based window', () => {
   const starts = ['2025-01-31', '2025-02-28', '2025-03-28'];
   assert.deepEqual(forecastPeriodStart([]), { status: 'insufficient-history' });
   assert.deepEqual(forecastPeriodStart(starts.slice(0, 1)), {
-    status: 'forecast', basis: 'preliminary', from: '2025-02-24', to: '2025-03-10',
+    status: 'forecast', basis: 'preliminary', from: '2025-02-24', expected: '2025-03-01', to: '2025-03-07',
   });
-  for (const count of [1, 2, 3]) {
-    const forecast = forecastPeriodStart(starts.slice(0, count));
-    assert.equal(forecast.basis, 'preliminary');
-    assert.equal(estimateCyclePhases(forecast, starts[count - 1], null), null);
+  for (const count of [2, 3]) {
+    assert.deepEqual(forecastPeriodStart(starts.slice(0, count)), forecastPeriodStart([starts[count - 1]]));
   }
   assert.deepEqual(forecastPeriodStart(['2025-01-01', '2025-02-14']), {
     status: 'abstained', reason: 'unusual-interval',
   });
+});
+
+test('one logged period shows preliminary phases unless they conflict with recorded bleeding', () => {
+  const start = '2025-11-13';
+  const forecast = forecastPeriodStart([start]);
+  const phases = {
+    follicularEnd: { from: '2025-11-24', to: '2025-11-30' },
+    ovulation: { from: '2025-11-25', to: '2025-12-01' },
+    lutealStart: { from: '2025-11-26', to: '2025-12-02' },
+    lutealEnd: { from: '2025-12-06', to: '2025-12-17' },
+  };
+  assert.deepEqual(estimateCyclePhases(forecast, start, null), phases);
+  assert.deepEqual(estimateCyclePhases(forecast, start, '2025-11-20'), phases);
+  assert.equal(estimateCyclePhases(forecast, start, '2025-11-25'), null);
 });
 
 test('invalid and duplicate dates do not produce a forecast', () => {
@@ -34,8 +46,8 @@ test('onset quantiles produce an ordered future range and accept unordered logs'
 
 test('expired ranges do not roll forward without a new recorded start', () => {
   const forecast = forecastPeriodStart(['2025-01-31']);
-  assert.deepEqual(currentForecast(forecast, '2025-03-10'), forecast);
-  assert.deepEqual(currentForecast(forecast, '2025-03-11'), { status: 'expired' });
+  assert.deepEqual(currentForecast(forecast, '2025-03-07'), forecast);
+  assert.deepEqual(currentForecast(forecast, '2025-03-08'), { status: 'expired' });
   const next = forecastPeriodStart(['2025-01-31', '2025-03-01']);
   assert.deepEqual(currentForecast(next, '2025-03-11'), next);
   assert.equal(next.from, '2025-03-25');
