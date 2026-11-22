@@ -11,5 +11,8 @@ app.addHook('onClose', () => database.end());
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => void app.close());
 }
-await app.listen({ host: '0.0.0.0', port: Number(process.env.PORT ?? 3000) });
-console.log('Dottie API listening.');
+// Vercel intercepts listen() while importing this module, so don't await it here.
+app.listen({ host: '0.0.0.0', port: Number(process.env.PORT ?? 3000) }, (error) => {
+  if (error) throw error;
+  console.log('Dottie API listening.');
+});
